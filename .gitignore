@@ -12,5 +12,8 @@ Gruntfile.js
 # node
 /node_modules
 
+# jekyll
+/_site
+
 # Vim
 .swp

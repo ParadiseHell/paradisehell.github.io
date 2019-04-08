@@ -1,12 +1,12 @@
 # Site settings
-title: ChengTao Blog
+title: ParadiseHell
 SEOTitle: 程涛的博客 | ChengTao Blog
 header-img: img/home-bg.jpg
 email: tao@paradisehell.org
 description: "ChengTao 的博客"
 keyword: "PradiseHell,ChengTao Blog"
 url: "http://paradisehell.org"              
-baseurl: "/" 
+baseurl: "" 
 
 
 
@@ -31,7 +31,8 @@ anchorjs: true                          # if you want to customize anchor. check
 
 # Gems
 # from PR#40, to support local preview for Jekyll 3.0
-gems: [jekyll-paginate]
+plugins:
+ - jekyll-paginate
 
 
 
@@ -46,7 +47,7 @@ kramdown:
 
 
 # Disqus settings
-disqus_username: disqus_tap4J2XVKG
+disqus_username: ctparadisehell
 
 
 # Analytics settings
