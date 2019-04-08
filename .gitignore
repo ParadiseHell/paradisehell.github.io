@@ -9,5 +9,8 @@
 # Grunt
 Gruntfile.js
 
+# node
+/node_modules
+
 # Vim
 .swp
