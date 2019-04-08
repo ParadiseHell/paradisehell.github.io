@@ -1,5 +1,13 @@
 # macOS
 .DS_Store
+*/.DS_Store
+*/*/.DS_Store
+
+# less
+/less
+
+# Grunt
+Gruntfile.js
 
 # Vim
 .swp
