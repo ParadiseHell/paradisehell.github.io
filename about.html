@@ -5,42 +5,20 @@ description: "Something about ChengTao."
 header-img: "img/about-bg.jpg"
 ---
 
-<!-- Language Selector -->
-<select onchange= "onLanChange(this.options[this.options.selectedIndex].value)">
-    <option value="0" selected> 中文 Chinese </option>
-    <option value="1"> 英语 English </option>
-</select>
-
-<!-- Chinese Version -->
-<div class="zh post-container">
+<!-- Introdution -->
+<div class="post-container">
     <blockquote>
 		Know the unkown.
     </blockquote>
+	<h2>关于我</h2>
+	<b>姓名&nbsp;:&nbsp;</b>程涛</br>
+	<b>学校&nbsp;:&nbsp;</b>北京林业大学(18 年毕业)</br>
+	<b>简介&nbsp;:&nbsp;</b>我只是一个终身学习者</br>
+	<b>当前学习状况&nbsp;:&nbsp;</b>疯狂学习 Android 进阶中 ......</br>
+	<h2>联系方式</h2>
+	<b>微信&nbsp;:&nbsp;</b>CT950827</br>
+	<b>邮箱&nbsp;:&nbsp;</b>tao@paradisehell.org</br>
 </div>
-
-<!-- English Version -->
-<div class="en post-container">
-    <blockquote>
-       Know the unkown. 
-    </blockquote>
-</div>
-
-<!-- Handle Language Change -->
-<script type="text/javascript">
-    var $zh = document.querySelector(".zh");
-    var $en = document.querySelector(".en");
-    function onLanChange(index){
-        if(index == 0){
-            $zh.style.display = "block";
-            $en.style.display = "none";
-        }else{
-            $en.style.display = "block";
-            $zh.style.display = "none";
-        }
-    }
-    onLanChange(0);
-</script>
-
 
 {% if site.disqus_username %}
 <!-- disqus 评论框 start -->
