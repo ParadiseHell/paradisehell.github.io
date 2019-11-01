@@ -1,6 +1,6 @@
 ---
 layout:     post
-title:      "不一样的线程池源码分析"
+title:      "线程池源码分析"
 subtitle:   "彻底搞清楚线程池的原理"
 date:       2019-10-24
 author:     "ChengTao"
