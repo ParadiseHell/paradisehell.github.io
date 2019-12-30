@@ -4,7 +4,7 @@ title:      "2020 年计划"
 subtitle:   "回顾 2019, 展望 2020"
 date:       2019-12-30
 author:     "ChengTao"
-header-img: "img/android.jpg"
+header-img: "img/android.png"
 tags:
     - 计划
 ---
