@@ -20,11 +20,13 @@ tags:
 suspend fun user(@Path("id") id: Long): User
 ```
 
-可以看到 Retrofit 的这波对协程的支持简直太棒了，以后写代码又可以少很多行代码了，哈哈哈。
+可以看到 Retrofit 这波对协程的支持简直太简洁了，只需要给方法添加 suspend 关键字即可，
+以后又可以少很多行代码了，哈哈哈。
 
 ## 初入 suspend 方法
+
 在了解 Retrofit 如何实现对协程的支持之前，我们必须先了解下 supend 方法，这样才能
-帮助我们更好的理解源码，我们先看看下面的这个这个例子。
+帮助我们更好地理解源码，我们先看看下面的这个这个例子。
 
 ```kotlin
 // 非 suspend 方法
@@ -38,7 +40,7 @@ suspend fun testSuspend(text : String){}
 ```
 
 其实在代码层面我们是看不出 suspend 方法和非 suspend 方法有多么大的区别的，除了有
-一个 supsend 关键字，其他的毫无差别，这个时候我们就需要看看这两个方法字节码了。
+一个 supsend 关键字，其他的毫无差别，这个时候我们就需要看看这几个方法字节码了。
 
 ```text
 Compiled from "SuspendTest.kt"
@@ -76,7 +78,7 @@ RequestFactory build() {
   int parameterCount = parameterAnnotationsArray.length;
   parameterHandlers = new ParameterHandler<?>[parameterCount];
   for (int p = 0, lastParameter = parameterCount - 1; p < parameterCount; p++) {
-	// p == lastParameter 是标记是否对最后一个参数进行 Continuation 检测
+	// p == lastParameter 是标记是否对最后一个参数进行 Continuation 类型地检测
 	// 因为我们知道 supsend 方法的最后一个参数是 Continuation 类型
 	parameterHandlers[p] =
 		parseParameter(p, parameterTypes[p], parameterAnnotationsArray[p], p == lastParameter);
@@ -95,7 +97,7 @@ private @Nullable ParameterHandler<?> parseParameter(
   if (result == null) {
 	if (allowContinuation) {
 	  try {
-		// 判断参数的类型是否为 Continuation
+		// 判断参数的类型是否为 Continuation 类型
 		if (Utils.getRawType(parameterType) == Continuation.class) {
 		  // 标记当前的方法是 supend 方法
 		  isKotlinSuspendFunction = true;
@@ -112,14 +114,14 @@ private @Nullable ParameterHandler<?> parseParameter(
 ```
 
 截止目前我们已经知道 Retrofit 是如何判断当前的方法为 suspend 方法了，简单概括下，
-就是判断方法最后一个参数的类型是不是 Continuation.
+就是判断方法最后一个参数的类型是不是 Continuation 类型.
 
 ## 如何判断方法的返回值
 
-除了需要判断方法是否为 `supend` 方法，除此之外，还需要判断方法的返回类型是什么，
-要不然 Retrit 就无法创建响应的 `CallAdapter`.
+除了需要判断方法是否为 suspend 方法之外，还需要判断方法的返回类型是什么，要不然
+Retrofit 就无法创建相应的 CallAdapter.
 
-在此之前我们还需要反汇编一个带返回值的 `suspend` 方法：
+在此之前我们还需要反汇编一个带返回值的 suspend 方法：
 
 ```kotlin
 suspend fun testString() : String {
@@ -137,9 +139,9 @@ public final class SuspendTestKt {
 }
 ```
 
-从上面的反汇编结果不难看出，suspend 方法的返回值其实就是 Continuation 的泛型类型，
-所以只要获取 Continuation 的泛型的具体类型，我们就可以 suspend 方法的返回类型，
-Retrofit 也是这么做的，我们具体看源码。
+从上面的反汇编结果不难看出，suspend 方法的返回值其实就是 Continuation 的泛型的
+具体类型，所以只要获取 Continuation 的泛型的具体类型，我们就可以知道 suspend 方法
+的返回类型，Retrofit 也是这么做的，我们具体看源码。
 
 ```java
 static <ResponseT, ReturnT> HttpServiceMethod<ResponseT, ReturnT> parseAnnotations(
@@ -154,8 +156,7 @@ static <ResponseT, ReturnT> HttpServiceMethod<ResponseT, ReturnT> parseAnnotatio
 	if (isKotlinSuspendFunction) {
 	  Type[] parameterTypes = method.getGenericParameterTypes();
 	  // 获取最后一个参数的第一个泛型类型
-	  // 其实 Continuation 就一个泛型，这里就是 responseType 就是 suspend 方法
-	  // 的返回类型
+	  // 其实 Continuation 就一个泛型，这里 responseType 就是 suspend 方法的返回类型
 	  Type responseType = Utils.getParameterLowerBound(0,
 		  (ParameterizedType) parameterTypes[parameterTypes.length - 1]);
 	  // 再判断返回类型是否为 Response, 这里这么判断是为了方便开发者，我们看下下面的列子：
@@ -177,12 +178,12 @@ static <ResponseT, ReturnT> HttpServiceMethod<ResponseT, ReturnT> parseAnnotatio
 		// Determine if return type is nullable or not
 	  }
 	  
-	  // 为 suspend 方法创建 CallAdapter 的类型，我们知道 Retrofit 默认情况指下支持
+	  // 为 suspend 方法创建 CallAdapter 的类型，我们知道 Retrofit 默认情况只支持
 	  // Call 类型，比如下面的例子：
 	  //
 	  // Call<User> getUser();
 	  //
-	  // Retrofit 非常聪明的将 suspend 方法的 CallAdapter 类型转化成了 Call 类型，
+	  // Retrofit 非常聪明地将 suspend 方法的 CallAdapter 类型转化成了 Call 类型，
 	  // 这里 ParameterizedTypeImpl 就是一个自定的 Call 类型。
 	  adapterType = new Utils.ParameterizedTypeImpl(null, Call.class, responseType);
 	  annotations = SkipCallbackExecutorImpl.ensurePresent(annotations);
@@ -231,10 +232,10 @@ static <ResponseT, ReturnT> HttpServiceMethod<ResponseT, ReturnT> parseAnnotatio
 
 ## 如何处理 suspend 方法的返回值
 
-从上面的介绍我们知道，Retrofit 支持两种类型的返回值的 suspend 方法，一种是返回值
-类型为 Response 类型，一种是具体数据类型，那针对这两种类型 Retrofit 又是如何处理
-的呢？对于 Response 类型返回值的方法 Retrofit 返回了一个 SuspendForResponse 的
-HttpServiceMethod, 而对于具体数据类型返回值的方法 Retrofit 返回了一个
+从上面的介绍我们知道，Retrofit 支持两种类型返回值的 suspend 方法，一种是返回值
+类型为 Response 类型，另一种是具体数据类型，那针对这两种类型 Retrofit 又是如何
+处理的呢？对于 Response 类型返回值的方法 Retrofit 返回了一个 SuspendForResponse
+的 HttpServiceMethod, 而对于具体数据类型返回值的方法 Retrofit 返回了一个
 SuspendForBody 的 HttpServiceMethod, 具体细节我们接着看源码：
 
 ### 处理返回值为 Response 的 suspend 方法
@@ -271,17 +272,17 @@ suspend fun <T> Call<T>.awaitResponse(): Response<T> {
       cancel()
     }
     // 执行 Call 的 enque 方法，里面具体的操作就是通过之前的 RequestFactory 创建
-	// OkHttp 的 Request, 再通过 Request 创建 OkHttp 的 Call, 最后执行 OkHttp 的
+    // 的 OkHttp 的 Request, 再通过 Request 创建 OkHttp 的 Call, 最后执行 OkHttp 的
     // Call 的 enque 方法。使用了代理模式，具体的请求是交给 OkHttp 完成的。
     enqueue(object : Callback<T> {
       override fun onResponse(call: Call<T>, response: Response<T>) {
-		// 成功返回结果
+        // 成功返回结果
         continuation.resume(response)
       }
 
       override fun onFailure(call: Call<T>, t: Throwable) {
-		// 失败返回异常
-		// 所以执行 suspend 方法的时候我们需要 try catch 去捕获异常。
+        // 失败返回异常
+        // 所以执行 suspend 方法的时候我们需要 try catch 去捕获异常。
         continuation.resumeWithException(t)
       }
     })
@@ -311,8 +312,8 @@ static final class SuspendForBody<ResponseT> extends HttpServiceMethod<ResponseT
 	  //noinspection unchecked Checked by reflection inside RequestFactory.
 	  // 获取最后一个参数 Continuation, 用于接收返回结果
 	  Continuation<ResponseT> continuation = (Continuation<ResponseT>) args[args.length - 1];
-	  // 这里不用纠结 isNullable, Retrofit 就没有实现如果判断方法返回结果支持判断
-      // 是否可空，所以我们直接看 await 方法就行。
+	  // 这里不用纠结 isNullable, Retrofit 就没有实现如何判断方法返回结果是否
+          // 可空，所以我们直接看 await 方法就行。
 	  return isNullable
 		  ? KotlinExtensions.awaitNullable(call, continuation)
 		  : KotlinExtensions.await(call, continuation);
@@ -327,14 +328,14 @@ suspend fun <T : Any> Call<T>.await(): T {
       cancel()
     }
     // 执行 Call 的 enque 方法，里面具体的操作就是通过之前的 RequestFactory 创建
-    // OkHttp 的 Request, 再通过 Request 创建 OkHttp 的 Call, 最后执行 OkHttp 的
+    // 的 OkHttp 的 Request, 再通过 Request 创建 OkHttp 的 Call, 最后执行 OkHttp 的
     // Call 的 enque 方法。使用了代理模式，具体的请求是交给 OkHttp 完成的。
     enqueue(object : Callback<T> {
       override fun onResponse(call: Call<T>, response: Response<T>) {
-		// 判断请求是否成功
+        // 判断请求是否成功
         if (response.isSuccessful) {
           val body = response.body()
-		  // 如果具体数据类型为 null 也表示失败，直接返回异常
+          // 如果具体数据类型为 null 也表示失败，直接返回异常
           if (body == null) {
             val invocation = call.request().tag(Invocation::class.java)!!
             val method = invocation.method()
@@ -343,20 +344,23 @@ suspend fun <T : Any> Call<T>.await(): T {
                 '.' +
                 method.name +
                 " was null but response body type was declared as non-null")
-			// 返回异常
+            // 返回异常
+            // 所以执行 suspend 方法的时候我们需要 try catch 去捕获异常。
             continuation.resumeWithException(e)
           } else {
-			// 返回具体数据类型
+            // 返回具体数据类型
             continuation.resume(body)
           }
         } else {
-		  // 请求失败，返回异常
+          // 请求失败，返回异常
+          // 所以执行 suspend 方法的时候我们需要 try catch 去捕获异常。
           continuation.resumeWithException(HttpException(response))
         }
       }
 
       override fun onFailure(call: Call<T>, t: Throwable) {
-		// 请求失败，返回异常
+        // 请求失败，返回异常
+        // 所以执行 suspend 方法的时候我们需要 try catch 去捕获异常。
         continuation.resumeWithException(t)
       }
     })
@@ -368,8 +372,8 @@ suspend fun <T : Any> Call<T>.await(): T {
 
 Retrofit 对协程的支持其实就增加了不到 200 行代码吧，我真很佩服 Square 的工程师们，
 尤其是创建 suspend 方法的 CallAdapter 简直惊艳到我了，创建了一个自定义的 Call 类
-型就完美的复用之前的代码，什么时候才能达到他们的高度呀？我想至少还有很长的路还有
-很多的源码需要继续阅读，不断地了解他们解决问题思维，才能不断进度。
+型就完美地复用之前的代码，什么时候才能达到他们的高度呀？我想至少还有很长的路还有
+很多的源码需要继续阅读，不断地了解他们解决问题思维，才能不断进步。
 
 当我们了解了 Retrofit 是如何支持协程的，再开发过程中我们就能更好的解决遇到的问题，
 最后也希望这篇文章对你来说有所收获。
