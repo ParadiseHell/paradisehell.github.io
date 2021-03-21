@@ -698,18 +698,21 @@ private static final class ProxyClassFactory
 - [class_linker.cc](https://cs.android.com/android/platform/superproject/+/master:art/runtime/class_linker.cc;drc=master;l=4848)
 
 不过可以告诉大家一个结论，C++ 代码里并没有生成对应的字节码，而是通过 C++ 中的
-class 类直接设置对应的方法、接口列表等一系列参数，直接生成了对应的代理类的
-Class. 如果这里我理解有误还请大佬指出来，这里先谢谢了。
+class 类直接设置对应的方法、接口列表、ClassLoader 等一系列参数，直接生成了对应
+的代理类. 如果这里我理解有误还请大佬指出来，这里先谢谢了。
 
 除此之外，Android 的代理类，也有类似的 m0,m1,m2,m3 的方法，大家可以自己写个例子，
-通过反射获取动态代理的实例获取代理类相关的属性和方法，和 Java 版本没什么区别。
+通过反射获取动态代理的实例获取代理类相关的属性和方法，和 Java 版本没什么区别，只
+不过 Android 生成代理类的过程都放在了 native 层，少了和 Java 层的再次交互，速度
+上更快一些，我想这也是 Android JDK Proxy 的 `generateProxy` 方法加了 `FastNative`
+注解的原因吧。
 
 # 总结
 
 动态代理的原理：Java 版本通过生成继承了 Proxy 并实现了接口列表的对应代理类的字节码，
 然后通过 defineClass 方式定义对应的代理类, 最后通过反射创建代理对象实例；而
-Android 版本直接通过方法、接口列表等参数直接生成了对应代理类，省去了生成字节码的
-过程。
+Android 版本直接通过方法、接口列表、ClassLoader 等参数直接生成了对应代理类，
+省去了生成字节码的过程，将代理类的生成都放在了 navtive 层。
 
 代理类的方法执行原理：代理类在 static 块通过放射讲要代理的方法保存在成员变量中，
 具体方法执行的时候获取对应的方法通过 Proxy 的 InvocationHandler 的 invoke 方法
