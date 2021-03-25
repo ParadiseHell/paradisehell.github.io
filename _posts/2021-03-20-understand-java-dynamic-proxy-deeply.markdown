@@ -407,7 +407,7 @@ public final class ProxyInterfaceImpl extends java.lang.reflect.Proxy implements
        2: invokespecial #8                  // Method java/lang/reflect/Proxy."<init>":(Ljava/lang/reflect/InvocationHandler;)V
        5: return
   // 翻译后的 Java 代码
-  publick ProxyInterfaceImpl(InvocationHandler h) {
+  public ProxyInterfaceImpl(InvocationHandler h) {
     super.(h) 
   }
   
