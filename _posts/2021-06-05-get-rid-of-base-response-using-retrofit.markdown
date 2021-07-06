@@ -30,34 +30,33 @@ public interface GitHubService {
 而到了我们自己的项目，大多情况确实这样的：
 
 ```java
-public interface XXXService {
-  @GET("xxx")
-  Call<BaseResponse<XXX>> xxx();
+public interface UserService {
+  @GET("/users")
+  Call<BaseResponse<List<User>>> getAllUsers();
 }
 ```
 
 而不同的公司，有不同的数据结构，不过都是大同小异，比如 `code, data, message` 或者
 `status, data, message`, 每次都要写什么 `code == 0` 之类的代码，无聊不说，主要一点
-含量都没有。。。
+技术含量都没有。。。
 
 如果我们要是能把 BaseResponse 去掉，岂不美哉？就像下面的定义一样：
 
 ```java
-public interface XXXService {
-  @GET("xxx")
-  Call<XXX> xxx();
+public interface UserService {
+  @GET("/users")
+  Call<List<User>> getAllUsers();
 }
 ```
 
 如果是 Kotlin 就更爽了，直接 suspend 方法走起。
 
 ```kotlin
-interface XXXService {
-  @GET("xxx")
-  suspend fun xxx() : XXX
+interface UserService {
+  @GET("/users")
+  suspend fun getAllUsers() : List<User>
 }
 ```
-
 
 # Convert.Factory 中被忽略的参数
 
@@ -115,7 +114,7 @@ interface ConvexTransformer {
 annotation class Transformer(val value: KClass<out ConvexTransformer>)
 
 // 有了这个自定义注解，我们就可以给 Method 添加这个注解了
-interface XXXService {
+interface UserService {
     @GET("xxx")
     @Transformer(XXXTransformer::class)
     fun xxxMethod() : Any
@@ -189,7 +188,7 @@ dependencies {
 ## 实现 ConvexTransformer
 
 ```kotlin
-private class XXXConvexTransformer : ConvexTransformer {
+private class TestConvexTransformer : ConvexTransformer {
 	@Throws(IOException::class)
 	override fun transform(original: InputStream): InputStream {
 		TODO("Return the business data InputStream.")
@@ -201,7 +200,7 @@ private class XXXConvexTransformer : ConvexTransformer {
 
 ```kotlin
 Retrofit.Builder()
-	.baseUrl("https://xxx.com/")
+	.baseUrl("https://test.com/")
 	// ConvexConverterFactory 一定放在最前面
 	.addConverterFactory(ConvexConverterFactory())
 	.addConverterFactory(GsonConverterFactory.create())
@@ -212,17 +211,106 @@ Retrofit.Builder()
 
 ```kotlin
 interface XXXService {
-	@GET("xxx")
+	@GET("/users")
     // 使用 Transformer 注解，添加具体的 ConvexTransformer 实现类
-	@Transformer(XXXConvexTransformer::class)
-	suspend fun xxx() : XXX
+	@Transformer(TestConvexTransformer::class)
+	suspend fun getAllUsers() : List<User>
 }
 ```
 
-## 例子
+# 例子
 
-- [ConvexTest](https://github.com/ParadiseHell/convex/blob/main/convex/src/test/kotlin/org/paradisehell/convex/ConvexTest.kt)
-- [Android-Project](https://github.com/ParadiseHell/convex/blob/main/app/src/main/java/org/paradisehell/convex/MainActivity.kt)
+首先非常感谢 [WanAndroid](https://www.wanandroid.com/blog/show/2) 提供的免费 API.
+
+```kotlin
+// 1. 定义 BaseResponse
+// 用于处理后台返回的数据进行反序列化，拿到最终的 data 数据
+data class BaseResponse<T>(
+    @SerializedName("errorCode")
+    val errorCode: Int = 0,
+    @SerializedName("errorMsg")
+    val errorMsg: String? = null,
+    @SerializedName("data")
+    val data: T? = null
+)
+
+
+// 2. 实现 ConvexTransformer
+// 用户将后台返回的数据流转为具体的 data 数据
+class WanAndroidConvexTransformer : ConvexTransformer {
+    private val gson = Gson()
+
+    @Throws(IOException::class)
+    override fun transform(original: InputStream): InputStream {
+        // 先反序列化为 BaseResponse
+        val response = gson.fromJson<BaseResponse<JsonElement>>(
+            original.reader(),
+            object : TypeToken<BaseResponse<JsonElement>>() {
+            }.type
+        )
+        // 判断 Response 是否成功
+        // 成功则将 data 数据转换成 InputStream, 最后由具体 Converter 处理
+        if (response.errorCode == 0 && response.data != null) {
+            return response.data.toString().byteInputStream()
+        }
+        throw IOException(
+            "errorCode : " + response.errorCode + " ; errorMsg : " + response.errorMsg
+        )
+    }
+}
+
+// 3. 定义模型数据
+data class Article(
+    @SerializedName("id")
+    val id: Int = 0,
+    @SerializedName("link")
+    val link: String? = null,
+    @SerializedName("author")
+    val author: String? = null,
+    @SerializedName("superChapterName")
+    val superChapterName: String? = null
+)
+
+// 4. 定义 Service
+interface WanAndroidService {
+    @GET("/article/top/json")
+    // 为改方法指定 ConvexTransformer, 这样就可以将 BaseResponse 转换成 data 了
+    @Transformer(WanAndroidConvexTransformer::class)
+    suspend fun getTopArticles(): List<Article>
+}
+
+// 5. 定义 Retrofit
+private val retrofit by lazy {
+    Retrofit.Builder()
+        .baseUrl("https://wanandroid.com/")
+        // 一定将 ConvexConverterFactory 放在所有 Converter.Factory 的前面
+        .addConverterFactory(ConvexConverterFactory())
+        .addConverterFactory(GsonConverterFactory.create())
+        .build()
+}
+
+private val wanAndroidService by lazy {
+	retrofit.create(WanAndroidService::class.java)
+}
+
+// 6. 执行 Service 方法
+lifecycleScope.launch(Main) {
+    val result = withContext(IO) {
+        // 需要进行 try catch 操作, 因为请求失败会抛出异常
+        runCatching {
+	        wanAndroidService.getTopArticles()
+        }.onSuccess {
+	        return@withContext it
+        }.onFailure {
+	        it.printStackTrace()
+	        return@withContext it
+        }
+    }
+    // 打印数据
+    // 成功打印数据列表，失败打印 Exeception
+    printlin(result)
+}
+```
 
 ## 更多
 
