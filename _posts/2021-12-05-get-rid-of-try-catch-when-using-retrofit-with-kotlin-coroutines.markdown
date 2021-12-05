@@ -215,3 +215,6 @@ failure 的时候，返回一个假的 success, 则协程就不会抛出异常�
 API），则可以让我们网络请求变得无比简洁。
 
 但是这一切的前提都是 Retrofit 以及它动态代理的思想，所以 Retrofit yyds.
+
+# 感谢
+- [WanAndroid API](https://www.wanandroid.com/blog/show/2)
